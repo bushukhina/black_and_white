@@ -76,7 +76,7 @@ class King(Figure):
         moves = [(x, y) for x, y in King.get_permutations(x0, y0) if self.pos_can_be_placed(x, y, board)
                  and not self.move_creates_check((x, y), game)]
         if not self.was_moved:
-            moves += self.get_castling_moves(game)
+            moves += [(x, y) for x, y in self.get_castling_moves(game) if not self.move_creates_check((x, y), game)]
         return moves
 
     def get_castling_moves(self, game):

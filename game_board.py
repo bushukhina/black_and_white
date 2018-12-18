@@ -33,12 +33,13 @@ class Game:
         self.kings = {white: (-1, -1), black: (-1, -1)}
         self.is_checking_mode = False
         self.pawn_last_line = {white: 8, black: 1}
-        self.double_check = False
+        self.impossible_check = False
 
         self.pawn_coord = None
         self.have_once_moved_pawn = False
         self.check = {white: False, black: False}
         self.pat = {white: False, black: False}
+        self.mat = {white: False, black: False}
 
         self.was_three_repeats = False
         self.was_undo = False
@@ -53,6 +54,7 @@ class Game:
         self.game_states.append(self.get_state_dict())
         self.next_state = {white: None, black: None}
         self.next_step = {white: None, black: None}
+        self.is_checking_mat = False
 
     def play(self):
         while True:
@@ -97,18 +99,30 @@ class Game:
         self.step += 1
         self.player = turn[self.step % 2]
 
-        self.look_for_check()
-        if self.double_check:
+        piece_dict = self.look_for_check()
+
+        if self.impossible_check:
             self.undo_impossible_move()
-            self.double_check = False
-            print("King can't be left under check. Choose move to protect him")
+            self.impossible_check = False
+            if not self.is_checking_mat:
+                print("King can't be left under check. Choose move to protect him")
             return
+
+        if self.is_checking_mat:
+            self.is_checking_mat = False
+            return
+
+        if self.check[black]:
+            self.look_for_mat(black, piece_dict)
+        if self.check[white]:
+            self.look_for_mat(white, piece_dict)
 
         self.check_pat()
         self.save_step()
         if not self.load_mode:
             self.logger.write(start, end)
-        self.check_board_state()
+        if (not self.mat[white]) and (not self.mat[black]):
+            self.check_board_state()
         if self.finish_the_game():
             self.save_log()
             print(self.game_state)
@@ -126,7 +140,7 @@ class Game:
         counter = 0
         prev = False
         if len(self.game_states) != len(self.board_states):
-            print("we have a problem")
+            print("some problem with state saving")
         for i in range(last_ind - 2, -1, -2):
             if prev:
                 prev = False
@@ -249,12 +263,13 @@ class Game:
         state["pawn"] = self.have_once_moved_pawn
         state["pat"] = deepcopy(self.pat)
         state["check"] = deepcopy(self.check)
+        state["mat"] = deepcopy(self.mat)
         state["pawn coord"] = deepcopy(self.pawn_coord)
         return state
 
     def update_state(self, state):
         self.have_once_moved_pawn = state["pawn"]
-        # self.is_castling = state["castling"]
+        self.mat = deepcopy(state["mat"])
         self.pat = deepcopy(state["pat"])
         self.check = deepcopy(state["check"])
         self.pawn_coord = deepcopy(state["pawn coord"])
@@ -303,6 +318,12 @@ class Game:
                 (self.step == 85 and self.endless_game) or self.was_three_repeats:
             self.game_state = GameState.draw
             return True
+        if self.mat[white]:
+            self.game_state = GameState.blackWin
+            return True
+        if self.mat[black]:
+            self.game_state = GameState.whiteWin
+            return True
         return False
 
     def check_pat(self):
@@ -328,22 +349,57 @@ class Game:
                 piece_dict[piece.color].append((piece, position))
 
         if self.can_see_king(self.kings[white], piece_dict[black]):
-            print("White player is in check")
-            if self.check[white]:
-                self.double_check = True
+            if not self.is_checking_mat:
+                print("White player is in check")
+            if self.player == black:
+                self.impossible_check = True
             self.check[white] = True
         else:
             self.check[white] = False
 
         if self.can_see_king(self.kings[black], piece_dict[white]):
-            print("Black player is in check.")
-            if self.check[black]:
-                self.double_check = True
+            if not self.is_checking_mat:
+                print("Black player is in check.")
+            if self.player == white:
+                """
+                предотвращает шаг, после которого король останется под шахом и 
+                шаг, когда ты сам ставишь короля под удар
+                """
+                self.impossible_check = True
             self.check[black] = True
         else:
             self.check[black] = False
 
         self.is_checking_mode = False
+        return piece_dict
+
+    def look_for_mat(self, color, figures):
+        self.is_checking_mat = True
+        king = self.kings[color]
+        self.is_checking_mode = True
+
+        if len(self.board.get(king).possible_moves(king[0], king[1], self.board, self)) > 0:
+            print("king can protect himself")
+            self.mat[color] = False
+            self.is_checking_mode = False
+            self.is_checking_mat = False
+            return
+        self.is_checking_mode = False
+
+        for figure, figure_pos in figures[color]:
+            figure_moves = figure.possible_moves(figure_pos[0], figure_pos[1], self.board, self)
+            if len(figure_moves) == 0:
+                continue
+            for end in figure_moves:
+                self.move(figure, figure_pos, end)
+                if not self.is_checking_mat:
+                    self.mat[color] = False
+                    return
+        self.mat[color] = True
+        self.is_checking_mat = False
+
+    def get_board_emulation(self, start, end):
+        pass
 
     def can_see_king(self, king_position, piece_list):
         for piece, piece_position in piece_list:
