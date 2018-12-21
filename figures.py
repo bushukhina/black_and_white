@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 class Figure:
     def __init__(self, name, color, game, moved=False):
         self.name = name
@@ -11,8 +8,8 @@ class Figure:
     def possible_moves(self, x0, y0, board, game):
         pass
 
-    def __repr__(self):
-        return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + '}'
+    # def __repr__(self):
+    #     return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + '}'
 
     def __str__(self):
         return self.name
@@ -62,9 +59,9 @@ class King(Figure):
         super().__init__(name, color, game)
         self.castling = False
 
-    def __repr__(self):
-        return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', castling: ' + \
-               str(self.castling)+'}'
+    # def __repr__(self):
+    #     return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', castling: ' + \
+    #            str(self.castling)+'}'
 
     def __eq__(self, other):
         if type(self) != type(other) or self.name != other.name or self.color != other.color or \
@@ -140,9 +137,9 @@ class Rook(Figure):
         super().__init__(name, color, game)
         self.castling = False
 
-    def __repr__(self):
-        return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', castling: ' + \
-               str(self.castling)+'}'
+    # def __repr__(self):
+    #     return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', castling: ' + \
+    #            str(self.castling)+'}'
 
     def __eq__(self, other):
         if type(self) != type(other) or self.name != other.name or self.color != other.color or \
@@ -179,9 +176,9 @@ class Pawn(Figure):
         self.en_passant = False
         self.direction = self.game.direction
 
-    def __repr__(self):
-        return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', en passant: ' + \
-               str(self.en_passant)+'}'
+    # def __repr__(self):
+    #     return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', en passant: ' + \
+    #            str(self.en_passant)+'}'
 
     def __eq__(self, other):
         if type(self) != type(other) or self.name != other.name or self.color != other.color or \
@@ -241,3 +238,46 @@ class Pawn(Figure):
         if start[1] - end[1] == 2:
             return start[0], end[1] + 1
         return None
+
+
+class Painter(Figure):
+    def __init__(self, name, color, game):
+        super().__init__(name, color, game)
+        self.waitSteps = 0
+
+    def __eq__(self, other):
+        if type(self) != type(other) or self.name != other.name or self.color != other.color or \
+                self.was_moved != other.was_moved or self.waitSteps != self.waitSteps:
+            return False
+        return True
+
+    def possible_moves(self, x0, y0, board, game):
+        part_moves = [(x, y) for x, y in self.get_permutations_all_directions(x0, y0) if self.is_inside(x, y)]
+        part2_moves = []
+        for x1, y1 in part_moves:
+            part2_moves += self.get_permutations_no_diagonals(x1, y1)
+        result_moves = [(x2, y2) for x2, y2 in part2_moves if self.is_inside(x2, y2) and (x2, y2) not in game.board and
+                        not self.is_neighbour_cell(x0, y0, x2, y2)]
+        result_moves = list(set(result_moves))
+        return result_moves
+
+    @staticmethod
+    def is_neighbour_cell(x0, y0, x1, y1):
+        return abs(x0 - x1) <= 1 and abs(y0 - y1) <= 1
+
+    @staticmethod
+    def get_medium_field(start, end):
+        return Painter.get_between_number(start[0], end[0]), Painter.get_between_number(start[1], end[1])
+
+    @staticmethod
+    def get_between_number(c1, c2, ):
+        return c1 + 1 if c2 > c1 else c2 + 1
+
+    @staticmethod
+    def get_permutations_all_directions(x, y):
+        return [(x + 2, y), (x + 2, y + 2), (x + 2, y - 2), (x, y + 2),
+                (x, y - 2), (x - 2, y), (x - 2, y + 2), (x - 2, y - 2)]
+
+    @staticmethod
+    def get_permutations_no_diagonals(x, y):
+        return [(x + 1, y), (x, y + 1), (x, y - 1), (x - 1, y)]

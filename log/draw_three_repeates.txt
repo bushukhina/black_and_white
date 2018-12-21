@@ -1,0 +1,12 @@
+a2 a4
+h7 h5
+a1 a2
+h8 h7
+a2 a1
+h7 h8
+a1 a2
+h8 h7
+a2 a1
+h7 h8
+a1 a2
+h8 h7
