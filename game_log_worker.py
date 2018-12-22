@@ -42,13 +42,3 @@ class GameLogWorker:
 
     def delete_file(self):
         os.remove(self.file)
-
-
-# glw = GameLogWorker()
-# glw.write((1, 2), (1, 4))
-# glw.write((1, 7), (1, 7))
-# glw.write("undo", None)
-# print(glw.load())
-# import time
-# time.sleep(10)
-# glw.delete_file()

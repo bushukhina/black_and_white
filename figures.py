@@ -167,10 +167,6 @@ class Pawn(Figure):
         self.en_passant = False
         self.direction = self.game.direction
 
-    # def __repr__(self):
-    #     return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', en passant: ' + \
-    #            str(self.en_passant)+'}'
-
     def __eq__(self, other):
         if type(self) != type(other) or self.name != other.name or self.color != other.color or \
                 self.was_moved != other.was_moved or self.en_passant != other.en_passant:

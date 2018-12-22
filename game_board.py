@@ -12,7 +12,8 @@ chars = {white: {Pawn: "♙", Rook: "♖", Knight: "♘", Bishop: "♗", King: "
 
 
 class Game:
-    def __init__(self, args=None):
+    def __init__(self, args=None, test=False):
+        self.test = test
         self.use_painter = False
         self.save = False
         self.delete_log = False
@@ -62,12 +63,15 @@ class Game:
 
     def play(self):
         while True:
-            self.inform_check()
-            print(self)
+            if not self.test:
+                self.inform_check()
+                print(self)
             if len(self.load_moves) > 0:
                 self.load_mode = True
                 start, end = self.load_moves.pop()
             else:
+                if self.test:
+                    break
                 self.load_mode = False
                 start, end = self.get_coordinates()
             if start == "undo":
@@ -149,12 +153,15 @@ class Game:
                 self.painter_moved_partly[prev_player] = None
             self.logger.write(start, end)
         self.save_step()
+
         if (not self.mat[white]) and (not self.mat[black]) and (not self.pat[white]) and (not self.pat[black]):
             self.check_board_state()
+
         if self.finish_the_game():
-            self.save_log()
-            print(self.game_state)
-            sys.exit(0)
+            if not self.test:
+                self.save_log()
+                sys.exit(0)
+
 
     def prepare_to_move_painter(self, moving_figure, start, end):
         if self.painter_moved_partly[self.player] is None:
@@ -438,7 +445,6 @@ class Game:
                 if counter == 2:
                     self.was_three_repeats = True
                     break
-            # print()
 
     @staticmethod
     def cmp_dicts(d1, d2):
@@ -505,7 +511,7 @@ class Game:
             self.logger = GameLogWorker(None)
             self.delete_log = True
             return
-        if parser.load:
+        if parser.load is not None:
             self.logger = GameLogWorker(parser.load)
             self.load_moves = self.logger.load()
         else:
@@ -558,9 +564,7 @@ class Game:
         return result
 
     def finish_the_game(self):
-        if self.game_state == GameState.notFinished:
-            return False
-        elif self.pat[white]:
+        if self.pat[white]:
             self.game_state = GameState.drawWhitePat
         elif self.pat[black]:
             self.game_state = GameState.drawBlackPat
@@ -572,6 +576,9 @@ class Game:
             self.game_state = GameState.blackWin
         elif self.mat[black]:
             self.game_state = GameState.whiteWin
+
+        if self.game_state == GameState.notFinished:
+            return False
         return True
 
     def inform_check(self):
