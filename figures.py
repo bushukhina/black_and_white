@@ -8,9 +8,6 @@ class Figure:
     def possible_moves(self, x0, y0, board, game):
         pass
 
-    # def __repr__(self):
-    #     return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + '}'
-
     def __str__(self):
         return self.name
 
@@ -59,10 +56,6 @@ class King(Figure):
         super().__init__(name, color, game)
         self.castling = False
 
-    # def __repr__(self):
-    #     return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', castling: ' + \
-    #            str(self.castling)+'}'
-
     def __eq__(self, other):
         if type(self) != type(other) or self.name != other.name or self.color != other.color or \
                 self.was_moved != other.was_moved or self.castling != other.castling:
@@ -100,6 +93,8 @@ class King(Figure):
     def move_creates_check(self, k_pos, game):
         for position, piece in self.game.board.items():
             if self.color != piece.color:
+                if type(piece) == Painter:
+                    continue
                 if type(piece) == King:
                     if k_pos in piece.get_permutations(position[0], position[1]):
                         return True
@@ -136,10 +131,6 @@ class Rook(Figure):
     def __init__(self, name, color, game):
         super().__init__(name, color, game)
         self.castling = False
-
-    # def __repr__(self):
-    #     return '{name:' + self.name + ', color: ' + self.color + ', moved: ' + str(self.was_moved) + ', castling: ' + \
-    #            str(self.castling)+'}'
 
     def __eq__(self, other):
         if type(self) != type(other) or self.name != other.name or self.color != other.color or \
@@ -218,7 +209,7 @@ class Pawn(Figure):
     def get_extra_moves(self, x, y, game):
         """Проверяем, есть ли возможность взятия на проходе"""
         move = self.get_medium_field(game.pawn_coord)
-        if move is None:
+        if move is None or move in game.board:
             return []
         if y + self.direction[self.color] == move[1]:
             if x + 1 == move[0] or x - 1 == move[0]:
@@ -243,23 +234,39 @@ class Pawn(Figure):
 class Painter(Figure):
     def __init__(self, name, color, game):
         super().__init__(name, color, game)
-        self.waitSteps = 0
+        self.done_steps = 0
+        self.wait_steps = 0
 
     def __eq__(self, other):
         if type(self) != type(other) or self.name != other.name or self.color != other.color or \
-                self.was_moved != other.was_moved or self.waitSteps != self.waitSteps:
+                self.was_moved != other.was_moved or self.wait_steps != self.wait_steps or \
+                self.done_steps != self.done_steps:
             return False
         return True
 
     def possible_moves(self, x0, y0, board, game):
-        part_moves = [(x, y) for x, y in self.get_permutations_all_directions(x0, y0) if self.is_inside(x, y)]
-        part2_moves = []
-        for x1, y1 in part_moves:
-            part2_moves += self.get_permutations_no_diagonals(x1, y1)
-        result_moves = [(x2, y2) for x2, y2 in part2_moves if self.is_inside(x2, y2) and (x2, y2) not in game.board and
-                        not self.is_neighbour_cell(x0, y0, x2, y2)]
-        result_moves = list(set(result_moves))
-        return result_moves
+        if self.wait_steps > 0:
+            return []
+        if game.is_checking_mode:
+            part_moves = [(x, y) for x, y in self.get_permutations_all_directions(x0, y0) if self.is_inside(x, y)]
+            part2_moves = []
+            for x1, y1 in part_moves:
+                part2_moves += self.get_permutations_no_diagonals(x1, y1)
+            return [(x2, y2) for x2, y2 in part2_moves if self.is_inside(x2, y2) and (x2, y2) not in game.board and
+                    not self.is_neighbour_cell(x0, y0, x2, y2)]
+        elif self.done_steps == 0:
+            "x0, y0 - точка старта"
+            return [(x, y) for x, y in self.get_permutations_all_directions(x0, y0) if self.is_inside(x, y)]
+        elif self.done_steps == 1:
+            "x0, y0 - точка промежуточного 'толчка', x, y - точка старта"
+            x = game.painter_moved_partly[self.color][0][0]
+            y = game.painter_moved_partly[self.color][0][1]
+            return [(x1, y1) for x1, y1 in self.get_permutations_no_diagonals(x0, y0) if
+                    self.is_inside(x1, y1) and (x1, y1) not in game.board and
+                    not self.is_neighbour_cell(x, y, x1, y1)]
+        else:
+            print("some error")
+            return []
 
     @staticmethod
     def is_neighbour_cell(x0, y0, x1, y1):
@@ -271,7 +278,12 @@ class Painter(Figure):
 
     @staticmethod
     def get_between_number(c1, c2, ):
-        return c1 + 1 if c2 > c1 else c2 + 1
+        if c2 > c1:
+            return c1 + 1
+        elif c1 == c2:
+            return c1
+        else:
+            return c2 + 1
 
     @staticmethod
     def get_permutations_all_directions(x, y):
