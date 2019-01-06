@@ -12,10 +12,8 @@ class Figure:
         return self.name
 
     def __eq__(self, other):
-        if type(self) != type(other) or self.name != other.name \
-                or self.color != other.color or self.was_moved != other.was_moved:
-            return False
-        return True
+        return (type(self), self.name, self.color, self.was_moved) == \
+               (type(other), other.name, other.color, other.was_moved)
 
     @staticmethod
     def is_inside(x, y):
@@ -57,16 +55,15 @@ class King(Figure):
         self.castling = False
 
     def __eq__(self, other):
-        if type(self) != type(other) or self.name != other.name or self.color != other.color or \
-                self.was_moved != other.was_moved or self.castling != other.castling:
-            return False
-        return True
+        return super().__eq__(other) and self.castling == other.castling
 
     def possible_moves(self, x0, y0, board, game):
-        moves = [(x, y) for x, y in King.get_permutations(x0, y0) if self.pos_can_be_placed(x, y, board)
+        moves = [(x, y) for x, y in King.get_permutations(x0, y0)
+                 if self.pos_can_be_placed(x, y, board)
                  and not self.move_creates_check((x, y), game)]
         if not self.was_moved:
-            moves += [(x, y) for x, y in self.get_castling_moves(game) if not self.move_creates_check((x, y), game)]
+            moves += [(x, y) for x, y in self.get_castling_moves(game)
+                      if not self.move_creates_check((x, y), game)]
         return moves
 
     def get_castling_moves(self, game):
@@ -84,24 +81,27 @@ class King(Figure):
 
     @staticmethod
     def check_rook_pos(pos, game):
-        rk = game.board.get(pos, None)
+        rk = game.figures.get(pos, None)
         if rk is not None:
             if not rk.was_moved:
                 return [pos]
         return []
 
     def move_creates_check(self, k_pos, game):
-        for position, piece in self.game.board.items():
+        for position, piece in self.game.figures.items():
             if self.color != piece.color:
                 if type(piece) == Painter:
                     continue
                 if type(piece) == King:
-                    if k_pos in piece.get_permutations(position[0], position[1]):
+                    if k_pos in \
+                            piece.get_permutations(position[0], position[1]):
                         return True
                 elif type(piece) == Pawn:
-                    if k_pos in piece.get_check_moves(position[0], position[1]):
+                    if k_pos in \
+                            piece.get_check_moves(position[0], position[1]):
                         return True
-                elif k_pos in piece.possible_moves(position[0], position[1], self.game.board, game):
+                elif k_pos in piece.possible_moves(position[0], position[1],
+                                                   self.game.figures, game):
                     return True
         return False
 
@@ -133,10 +133,7 @@ class Rook(Figure):
         self.castling = False
 
     def __eq__(self, other):
-        if type(self) != type(other) or self.name != other.name or self.color != other.color or \
-                self.was_moved != other.was_moved or self.castling != other.castling:
-            return False
-        return True
+        return super().__eq__(other) and self.castling == other.castling
 
     def possible_moves(self, x0, y0, board, game):
         moves = self.generate_moves(x0, y0, board, deltas=straights)
@@ -148,11 +145,11 @@ class Rook(Figure):
         moves = []
         if not self.was_moved:
             if self.color == "white":
-                king = game.board.get((5, 1), None)
+                king = game.figures.get((5, 1), None)
                 if king is not None and not king.was_moved:
                     moves.append((5, 1))
             else:
-                king = game.board.get((5, 8), None)
+                king = game.figures.get((5, 8), None)
                 if king is not None and not king.was_moved:
                     moves.append((5, 8))
 
@@ -168,27 +165,25 @@ class Pawn(Figure):
         self.direction = self.game.direction
 
     def __eq__(self, other):
-        if type(self) != type(other) or self.name != other.name or self.color != other.color or \
-                self.was_moved != other.was_moved or self.en_passant != other.en_passant:
-            return False
-        return True
+        return super().__eq__(other) and self.en_passant == other.en_passant
 
     def possible_moves(self, x, y, board, game):
         moves = []
         y1 = y + self.direction[self.color]
 
-        "attack diagonal"
+        # "attack diagonal"
         if self.attack_is_possible(x + 1, y1, board):
             moves.append((x + 1, y1))
         if self.attack_is_possible(x - 1, y1, board):
             moves.append((x - 1, y1))
 
-        "moving forward"
+        # "moving forward"
         y2 = y + 2 * self.direction[self.color]
         if (x, y1) not in board and Figure.is_inside(x, y1):
             moves.append((x, y1))
 
-            if not self.was_moved and (x, y2) not in board and Figure.is_inside(x, y2):
+            if not self.was_moved and (x, y2) not in board and \
+                    Figure.is_inside(x, y2):
                 moves.append((x, y2))
 
         if game.have_once_moved_pawn and game.pawn_coord is not None:
@@ -200,12 +195,13 @@ class Pawn(Figure):
                (x, y) in board and board[(x, y)].color != self.color
 
     def get_check_moves(self, x, y):
-        return [(x + 1, y + self.direction[self.color]), (x - 1, y + self.direction[self.color])]
+        return [(x + 1, y + self.direction[self.color]),
+                (x - 1, y + self.direction[self.color])]
 
     def get_extra_moves(self, x, y, game):
-        """Проверяем, есть ли возможность взятия на проходе"""
+        # """Проверяем, есть ли возможность взятия на проходе"""
         move = self.get_medium_field(game.pawn_coord)
-        if move is None or move in game.board:
+        if move is None or move in game.figures:
             return []
         if y + self.direction[self.color] == move[1]:
             if x + 1 == move[0] or x - 1 == move[0]:
@@ -234,31 +230,38 @@ class Painter(Figure):
         self.wait_steps = 0
 
     def __eq__(self, other):
-        if type(self) != type(other) or self.name != other.name or self.color != other.color or \
-                self.was_moved != other.was_moved or self.wait_steps != self.wait_steps or \
-                self.done_steps != self.done_steps:
-            return False
-        return True
+        return super().__eq__(other) and (self.wait_steps, self.done_steps) \
+               == (other.wait_steps, other.done_steps)
 
     def possible_moves(self, x0, y0, board, game):
         if self.wait_steps > 0:
             return []
         if game.is_checking_mode:
-            part_moves = [(x, y) for x, y in self.get_permutations_all_directions(x0, y0) if self.is_inside(x, y)]
+            part_moves = \
+                [(x, y) for x, y in self.get_permutations_step1(x0, y0)
+                 if self.is_inside(x, y)]
             part2_moves = []
             for x1, y1 in part_moves:
-                part2_moves += self.get_permutations_no_diagonals(x1, y1)
-            return [(x2, y2) for x2, y2 in part2_moves if self.is_inside(x2, y2) and (x2, y2) not in game.board and
+                part2_moves += self.get_permutations_step2(x1, y1)
+            return [(x2, y2) for x2, y2 in part2_moves
+                    if self.is_inside(x2, y2) and
+                    (x2, y2) not in game.figures and
                     not self.is_neighbour_cell(x0, y0, x2, y2)]
         elif self.done_steps == 0:
-            "x0, y0 - точка старта"
-            return [(x, y) for x, y in self.get_permutations_all_directions(x0, y0) if self.is_inside(x, y)]
+            # "x0, y0 - точка старта"
+            return [(x, y) for x, y in self.get_permutations_step1(x0, y0)
+                    if self.is_inside(x, y)]
         elif self.done_steps == 1:
-            "x0, y0 - точка промежуточного 'толчка', x, y - точка старта"
+            # "x0, y0 - точка промежуточного 'толчка', x, y - точка старта"
             x = game.painter_moved_partly[self.color][0][0]
             y = game.painter_moved_partly[self.color][0][1]
-            return [(x1, y1) for x1, y1 in self.get_permutations_no_diagonals(x0, y0) if
-                    self.is_inside(x1, y1) and (x1, y1) not in game.board and
+            print([(x1, y1) for x1, y1 in self.get_permutations_step2(x0, y0)
+                    if self.is_inside(x1, y1) and
+                    (x1, y1) not in game.figures and
+                    not self.is_neighbour_cell(x, y, x1, y1)])
+            return [(x1, y1) for x1, y1 in self.get_permutations_step2(x0, y0)
+                    if self.is_inside(x1, y1) and
+                    (x1, y1) not in game.figures and
                     not self.is_neighbour_cell(x, y, x1, y1)]
         else:
             print("some error")
@@ -270,7 +273,8 @@ class Painter(Figure):
 
     @staticmethod
     def get_medium_field(start, end):
-        return Painter.get_between_number(start[0], end[0]), Painter.get_between_number(start[1], end[1])
+        return Painter.get_between_number(start[0], end[0]), \
+               Painter.get_between_number(start[1], end[1])
 
     @staticmethod
     def get_between_number(c1, c2, ):
@@ -282,10 +286,10 @@ class Painter(Figure):
             return c2 + 1
 
     @staticmethod
-    def get_permutations_all_directions(x, y):
+    def get_permutations_step1(x, y):
         return [(x + 2, y), (x + 2, y + 2), (x + 2, y - 2), (x, y + 2),
                 (x, y - 2), (x - 2, y), (x - 2, y + 2), (x - 2, y - 2)]
 
     @staticmethod
-    def get_permutations_no_diagonals(x, y):
+    def get_permutations_step2(x, y):
         return [(x + 1, y), (x, y + 1), (x, y - 1), (x - 1, y)]
