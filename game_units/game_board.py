@@ -14,7 +14,8 @@ chars = {WHITE: {Pawn: "♙", Rook: "♖", Knight: "♘",
 
 
 class Board:
-    def __init__(self, args=None):
+    def __init__(self, args=None, test=False):
+        self.new_figure_type = None
         self.use_painter = False
         self.delete_log = False
         self.save = False
@@ -72,7 +73,7 @@ class Board:
         else:
             moving_figure = self.figures.get(start, None)
 
-        if moving_figure is None or moving_figure.color != self.player:
+        if moving_figure is not None and moving_figure.color != self.player:
             return None
         return moving_figure
 
@@ -222,12 +223,16 @@ class Board:
             self.pawn_coord = [start, end]
             self.have_once_moved_pawn = True
 
-        if end[1] == self.pawn_last_line[self.player]:
+        if self.is_last_line(end):
             # Превращение пешки
-            new_type = self.get_figure()
+            new_type = self.new_figure_type
+            self.new_figure_type = None
             if new_type is not None:
                 self.figures[start] = \
                     new_type(chars[self.player][new_type], self.player, self)
+
+    def is_last_line(self, end):
+        return end[1] == self.pawn_last_line[self.player]
 
     def save_step(self):
         self.board_states.append(deepcopy(self.figures))
@@ -512,13 +517,17 @@ class Board:
         self.save = True
 
     @staticmethod
-    def get_figure():
+    def get_figure_type(self):
         print("Now you can make your pawn to be queen, knight, rook or bishop")
-        print("Input q for queen, b for bishop, k for knight or r for rook")
+        print("Or you can leave it pawn")
+        print("Input q for queen, b for bishop, "
+              "k for knight or r for rook, p for pawn")
         in_value = input("pawn will become: ")
+        return in_value
+
+    def set_figure_type(self, in_value):
         d = {"q": Queen, "b": Bishop, "k": Knight, "r": Rook}
-        figure = d.get(in_value, None)
-        return figure
+        self.new_figure_type = d.get(in_value, None)
 
     def inform_check(self):
         if self.check[WHITE]:
@@ -534,3 +543,57 @@ class Board:
         move = self.get_ai_move()
         f = self.get_moving_figure(move[0])
         self.move(f, move[0], move[1])
+
+    def __str__(self):
+        if self.player == BLACK and self.game_mode[BLACK] == "H":
+            f, t, d = 8, 0, -1
+        else:
+            f, t, d = 1, 9, 1
+        s = "  " + "_" * 24
+        result = "\n{} TURN\n".format(self.player.upper())
+        for y in reversed(range(f, t, d)):
+            result += s
+            result += "\n"
+            line = str(y) + "|"
+            for x in range(f, t, d):
+                if (x, y) in self.figures:
+                    line += " " + str(self.figures[(x, y)]) + ""
+                else:
+                    line += " " + "▯" + ""
+                line += "|"
+            result += line
+            result += "\n"
+        result += s
+        if self.player == BLACK and self.game_mode[BLACK] == "H":
+            result += "\n   H  G  F  E  D  C  B  A"
+        else:
+            result += "\n   A  B  C  D  E  F  G  H"
+        return result
+
+    @staticmethod
+    def parse_input():
+        a = input("from: ")
+        b = input("to: ")
+        if a == "undo" or a == "redo":
+            return a, None
+        return Board.convert_positions(a, b)
+
+    @staticmethod
+    def convert_positions(a, b):
+        try:
+            a = (ord(a[0]) - 96), int(a[1])
+            b = (ord(b[0]) - 96), int(b[1])
+            return a, b
+        except ValueError:
+            print("Incorrect input.")
+            return (-1, -1), (-1, -1)
+        except IndexError:
+            print("Incorrect input.")
+            return (-1, -1), (-1, -1)
+
+    def get_coordinates(self):
+        if self.is_ai_move():
+            start, end = self.get_ai_move()
+        else:
+            start, end = self.parse_input()
+        return start, end

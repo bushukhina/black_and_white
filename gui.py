@@ -34,7 +34,6 @@ class Chess(QFrame):
         self.start = (-1, -1)
 
         self.unit_ui()
-        # self.parent.set_status()
 
     def unit_ui(self):
         self.timer = QBasicTimer()
@@ -75,6 +74,8 @@ class Chess(QFrame):
             self.start = chosen_point
         elif self.board.move_is_correct(self.chosen_figure,
                                         self.start, chosen_point):
+            if self.board.is_last_line(chosen_point):
+                self.show_dialog()
             self.board.move(self.chosen_figure, self.start, chosen_point)
             self.chosen_figure = None
             self.start = (-1, -1)
@@ -96,8 +97,11 @@ class Chess(QFrame):
             self.parent.show_dialog()
 
     def real_point_to_game_point(self, point_loc):
-        return (point_loc.x // self.fig_width + 1), \
+        pos = (point_loc.x // self.fig_width + 1), \
                8 - (point_loc.y // self.fig_height)
+        if self.board.player == BLACK:
+            pos = 8 - pos[0] + 1, 8 - pos[1] + 1
+        return pos
 
     def paintEvent(self, e):
         qp = QPainter()
@@ -135,7 +139,10 @@ class Chess(QFrame):
                 continue
             pixmap = QPixmap(Chess.get_img_path(fig.color, type(fig)))
 
-            pos = pos[0] - 1, pos[1] - 1
+            if self.board.player == WHITE:
+                pos = pos[0] - 1, pos[1] - 1
+            else:
+                pos = 8 - pos[0], 8 - pos[1]
             qp.drawPixmap(pos[0] * self.fig_width,
                           self.height - pos[1] * self.fig_height - 80,
                           self.fig_width, self.fig_height, pixmap)
@@ -153,11 +160,21 @@ class Chess(QFrame):
             brush.setColor(QColor(255, 255, 255))
             qp.setBrush(brush)
 
-        pos = pos[0] - 1, pos[1] - 1
+        if self.board.player == WHITE:
+            pos = pos[0] - 1, pos[1] - 1
+        else:
+            pos = 8 - pos[0], 8 - pos[1]
         qp.drawEllipse(pos[0] * self.fig_width,
                        self.height - pos[1] * self.fig_height - 80,
                        self.fig_width,
                        self.fig_height)
+
+    def set_figure(self, arg):
+        self.board.set_figure_type(arg)
+
+    def show_dialog(self):
+        figure_dialog = FigureDialog(self)
+        figure_dialog.exec_()
 
 
 class Game(QMainWindow):
@@ -248,6 +265,47 @@ class Game(QMainWindow):
     def set_status(self):
         self.statusBar().showMessage("Turn: " + self.board.player +
                                      " . " + self.board.inform_check())
+
+
+class FigureDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.init_ui()
+
+    def parse_args(self):
+        f_text = self.f_box.currentText()[0]
+        self.parent.set_figure(f_text)
+        self.close()
+
+    def init_ui(self):
+        text1 = "Now you can make your pawn to be queen, knight, " \
+                "rook or bishop."
+        text2 = "Or you can leave it pawn."
+
+        self.some_text = QLabel(text1, self)
+        self.some_text.move(20, 20)
+        self.some_text2 = QLabel(text2, self)
+        self.some_text2.move(20, 40)
+
+        self.f_text = QLabel('Pawn will become:', self)
+        self.f_text.move(70, 100)
+
+        self.f_box = QComboBox(self)
+        self.f_box.addItem('qween')
+        self.f_box.addItem('knight')
+        self.f_box.addItem('rook')
+        self.f_box.addItem('bishop')
+        self.f_box.addItem('pawn')
+        self.f_box.move(170, 100)
+
+        self.button_ok = QPushButton('Ok', self)
+        self.button_ok.move(170, 150)
+        self.button_ok.clicked.connect(self.parse_args)
+
+        self.setWindowTitle('Choose figure"s new type')
+        self.resize(360, 200)
+        self.show()
 
 
 class StartDialog(QDialog):
