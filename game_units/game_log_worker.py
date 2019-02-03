@@ -4,19 +4,20 @@ import os
 class GameLogWorker:
     def __init__(self, file):
         if file is not None:
-            # and os.path.isfile(file):
             self.file = file
         else:
             count = 0
-            file = './log/log.txt'
+            file = os.path.join('log', 'log' + str(count) + '.txt')
             while os.path.isfile(file):
                 count += 1
-                file = './log/log' + str(count) + '.txt'
+                file = os.path.join('log', 'log' + str(count) + '.txt')
             self.file = file
             with open(self.file, 'w') as f:
                 f.write('')
 
     def write(self, start, end):
+        """Логгирование ходов игры в формате: начало конец.
+        Каждый ход в новой строке."""
         if start == 'undo' or start == 'redo':
             with open(self.file, 'a') as f:
                 f.write(start + " " + "None" + "\n")
@@ -41,4 +42,5 @@ class GameLogWorker:
         return game_moves[::-1]
 
     def delete_file(self):
-        os.remove(self.file)
+        if os.path.isfile(self.file):
+            os.remove(self.file)

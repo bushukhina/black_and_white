@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QFrame, QMessageBox, QAction, QDialog, QMainWindow, QLabel, \
+    QComboBox, QPushButton, QErrorMessage, QApplication, QFileDialog
 from PyQt5.QtGui import QPainter, QBrush, QColor, QPixmap
 from PyQt5.QtCore import Qt, QBasicTimer
 
@@ -11,9 +12,10 @@ from game_units.game_board import Board
 from game_units.point import Point
 from game_units.figures import *
 
-white = "white"
-black = "black"
-short_figures = {Queen: "q", Bishop: "b", Knight: "n", Rook: "r", Pawn: "p", King: "k"}
+WHITE = "white"
+BLACK = "black"
+short_figures = {Queen: "q", Bishop: "b", Knight: "n",
+                 Rook: "r", Pawn: "p", King: "k"}
 
 
 class Chess(QFrame):
@@ -32,7 +34,7 @@ class Chess(QFrame):
         self.start = (-1, -1)
 
         self.unit_ui()
-        self.parent.set_status()
+        # self.parent.set_status()
 
     def unit_ui(self):
         self.timer = QBasicTimer()
@@ -71,7 +73,8 @@ class Chess(QFrame):
         if self.chosen_figure is None:
             self.chosen_figure = self.board.get_moving_figure(chosen_point)
             self.start = chosen_point
-        elif self.board.move_is_correct(self.chosen_figure, self.start, chosen_point):
+        elif self.board.move_is_correct(self.chosen_figure,
+                                        self.start, chosen_point):
             self.board.move(self.chosen_figure, self.start, chosen_point)
             self.chosen_figure = None
             self.start = (-1, -1)
@@ -83,8 +86,7 @@ class Chess(QFrame):
 
     def end_game(self):
         self.timer.stop()
-        message = str(self.board.game_state) + "."
-        message += 'Start new game?'
+        message = str(self.board.game_state) + "." + 'Start new game?'
         ask_game = QMessageBox.question(self,
                                         'End game',
                                         message,
@@ -100,9 +102,11 @@ class Chess(QFrame):
     def paintEvent(self, e):
         qp = QPainter()
         qp.begin(self)
-        self.draw_board(qp)
-        self.draw_figures(qp)
-        qp.end()
+        try:
+            self.draw_board(qp)
+            self.draw_figures(qp)
+        finally:
+            qp.end()
 
     def draw_board(self, qp):
         brush = QBrush(Qt.SolidPattern)
@@ -114,7 +118,7 @@ class Chess(QFrame):
                             j * self.fig_height,
                             self.fig_width,
                             self.fig_height)
-        brush.setColor(QColor(0, 0, 0))
+        brush.setColor(QColor(145, 67, 12))
         qp.setBrush(brush)
         for i in range(self.rows):
             for j in range((i + 1) % 2, self.columns, 2):
@@ -126,7 +130,7 @@ class Chess(QFrame):
     def draw_figures(self, qp):
         for pos in self.board.figures.keys():
             fig = self.board.figures[pos]
-            if type(fig) == Painter:
+            if isinstance(fig, Painter):
                 self.draw_painter(qp, pos)
                 continue
             pixmap = QPixmap(Chess.get_img_path(fig.color, type(fig)))
@@ -142,8 +146,8 @@ class Chess(QFrame):
 
     def draw_painter(self, qp, pos):
         brush = QBrush(Qt.SolidPattern)
-        if self.board.figures[pos].color == black:
-            brush.setColor(QColor(40, 40, 40))
+        if self.board.figures[pos].color == BLACK:
+            brush.setColor(QColor(30, 30, 30))
             qp.setBrush(brush)
         else:
             brush.setColor(QColor(255, 255, 255))
@@ -161,7 +165,9 @@ class Game(QMainWindow):
         super().__init__()
         self.parent = parent
         self.board = board
-        self.statusBar().showMessage(self.board.player + self.board.inform_check())
+        self.statusBar().showMessage("Turn: " + self.board.player +
+                                     '.Chess board ' +
+                                     str(self.parent.index + 1))
         self.chess_game = Chess(self, board)
         self.setCentralWidget(self.chess_game)
         self.init_ui()
@@ -192,7 +198,6 @@ class Game(QMainWindow):
         file_menu.addAction(load_act)
         file_menu.addAction(exit_act)
 
-
         file_menu2 = menu_bar.addMenu("&Edit")
 
         redo_act = QAction('Redo', self)
@@ -206,8 +211,32 @@ class Game(QMainWindow):
         file_menu2.addAction(redo_act)
         file_menu2.addAction(undo_act)
 
-        self.setGeometry(300, 30, 650, 670)
+        file_menu3 = menu_bar.addMenu("&Change board")
+
+        add_act = QAction('Add new board', self)
+        add_act.setShortcut('Ctrl+Shift+N')
+        add_act.triggered.connect(self.add_board)
+
+        next_act = QAction('Next board', self)
+        next_act.setShortcut('Ctrl+Tab')
+        next_act.triggered.connect(self.next_board)
+
+        file_menu3.addAction(add_act)
+        file_menu3.addAction(next_act)
+
+        self.setGeometry(300, 30, 645, 680)
+        self.setFixedSize(self.size())
         self.show()
+
+    def add_board(self):
+        if len(self.parent.games) < 4:
+            self.setVisible(False)
+            self.parent.add_game()
+
+    def next_board(self):
+        if len(self.parent.games) > 1:
+            self.setVisible(False)
+            self.parent.next_game()
 
     def save_data(self):
         self.board.set_save()
@@ -217,7 +246,8 @@ class Game(QMainWindow):
         self.parent.setVisible(True)
 
     def set_status(self):
-        self.statusBar().showMessage("Turn:"+self.board.player +". "+ self.board.inform_check())
+        self.statusBar().showMessage("Turn: " + self.board.player +
+                                     " . " + self.board.inform_check())
 
 
 class StartDialog(QDialog):
@@ -279,12 +309,16 @@ class Menu(QMainWindow):
     def __init__(self):
         super().__init__()
         self.load = None
+        self.games = []
+        self.index = 0
         self.table = None
         self.height = 300
         self.width = 300
+        self.adding = False
         self.init_ui()
 
     def init_ui(self):
+
         self.statusBar().showMessage('Welcome!')
         self.setWindowTitle('Chess')
 
@@ -305,22 +339,44 @@ class Menu(QMainWindow):
 
         self.setGeometry(150, 150, 300, 200)
         self.show()
+        self.start_game(ArgsWrap(None, 'H-H', False, False))
+
+    def increase_index(self):
+        self.index = (self.index + 1) % len(self.games)
+
+    def add_game(self):
+        self.adding = True
+        self.setVisible(True)
+
+    def next_game(self):
+        self.increase_index()
+        self.table = self.games[self.index]
+        self.table.setVisible(True)
 
     def show_dialog(self):
         self.dialog = StartDialog(self)
         self.dialog.show()
 
-    def close_table(self):
-        if self.table is not None:
-            self.table.close()
+    # def close_table(self):
+    #     if self.table is not None:
+    #         self.table.close()
+    #         self.table = None
 
     def start_game(self, arg):
-        self.close_table()
+        if not self.adding:
+            for g in self.games:
+                g.close()
+            self.table = None
+            self.index = 0
+            self.games = []
+        self.adding = False
         self.setVisible(False)
         arg.load = self.load
         self.load = None
         board = Board(arg)
         self.table = Game(self, board)
+        self.games.append(self.table)
+        self.increase_index()
 
     def load_game(self):
         path = os.path.join(getcwd(), 'log')
@@ -332,7 +388,8 @@ class Menu(QMainWindow):
             except Exception as e:
                 error_dialog = QErrorMessage(self)
                 error_dialog.setWindowTitle('Error!')
-                error_dialog.showMessage("Can't load this game!")
+                error_dialog.showMessage("Can't load this game. "
+                                         "Exception text:" + str(e))
 
 
 if __name__ == '__main__':

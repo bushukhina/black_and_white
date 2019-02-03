@@ -12,8 +12,10 @@ class Figure:
         return self.name
 
     def __eq__(self, other):
-        return (type(self), self.name, self.color, self.was_moved) == \
-               (type(other), other.name, other.color, other.was_moved)
+        if type(self) != type(other):
+            return False
+        return (self.name, self.color, self.was_moved) == \
+               (other.name, other.color, other.was_moved)
 
     @staticmethod
     def is_inside(x, y):
@@ -255,16 +257,15 @@ class Painter(Figure):
             # "x0, y0 - точка промежуточного 'толчка', x, y - точка старта"
             x = game.painter_moved_partly[self.color][0][0]
             y = game.painter_moved_partly[self.color][0][1]
-            print([(x1, y1) for x1, y1 in self.get_permutations_step2(x0, y0)
-                    if self.is_inside(x1, y1) and
-                    (x1, y1) not in game.figures and
-                    not self.is_neighbour_cell(x, y, x1, y1)])
+            # print([(x1, y1) for x1, y1 in self.get_permutations_step2(x0, y0)
+            #       if self.is_inside(x1, y1) and
+            #       (x1, y1) not in game.figures and
+            #       not self.is_neighbour_cell(x, y, x1, y1)])
             return [(x1, y1) for x1, y1 in self.get_permutations_step2(x0, y0)
                     if self.is_inside(x1, y1) and
                     (x1, y1) not in game.figures and
                     not self.is_neighbour_cell(x, y, x1, y1)]
         else:
-            print("some error")
             return []
 
     @staticmethod

@@ -2,17 +2,15 @@ from game_units.figures import Pawn, Queen, King, Knight, Rook, Bishop, Painter
 from game_units.game_state import GameState
 from game_units.game_log_worker import GameLogWorker
 import random
-import sys
 from copy import deepcopy
 
-white = "white"
-black = "black"
-turn = (white, black)
-chars = \
-    {white: {Pawn: "♙", Rook: "♖", Knight: "♘",
-             Bishop: "♗", King: "♔", Queen: "♕", Painter: "w"},
-     black: {Pawn: "♟", Rook: "♜", Knight: "♞",
-             Bishop: "♝", King: "♚", Queen: "♛", Painter: "b"}}
+WHITE = "white"
+BLACK = "black"
+turn = (WHITE, BLACK)
+chars = {WHITE: {Pawn: "♙", Rook: "♖", Knight: "♘",
+                 Bishop: "♗", King: "♔", Queen: "♕", Painter: "w"},
+         BLACK: {Pawn: "♟", Rook: "♜", Knight: "♞",
+                 Bishop: "♝", King: "♚", Queen: "♛", Painter: "b"}}
 
 
 class Board:
@@ -22,28 +20,28 @@ class Board:
         self.save = False
         self.logger = None
         self.load_moves = []
-        self.game_mode = {white: "'H", black: 'H'}
+        self.game_mode = {WHITE: "'H", BLACK: 'H'}
         self.endless_game = False
         self.unpack_args(args)
         self.load_mode = False
 
-        self.direction = {white: 1, black: -1}
+        self.direction = {WHITE: 1, BLACK: -1}
         self.figures = {}
         self.full_board()
         self.step = 0
         self.player = turn[0]
         self.game_state = GameState.NOT_FINISHED
 
-        self.kings = {white: (-1, -1), black: (-1, -1)}
+        self.kings = {WHITE: (-1, -1), BLACK: (-1, -1)}
         self.is_checking_mode = False
-        self.pawn_last_line = {white: 8, black: 1}
+        self.pawn_last_line = {WHITE: 8, BLACK: 1}
         self.impossible_check = False
 
         self.pawn_coord = None
         self.have_once_moved_pawn = False
-        self.check = {white: False, black: False}
-        self.pat = {white: False, black: False}
-        self.mat = {white: False, black: False}
+        self.check = {WHITE: False, BLACK: False}
+        self.pat = {WHITE: False, BLACK: False}
+        self.mat = {WHITE: False, BLACK: False}
 
         self.was_three_repeats = False
         self.was_undo = False
@@ -51,18 +49,18 @@ class Board:
         self.board_states.append(deepcopy(self.figures))
         self.board_states.append(deepcopy(self.figures))
 
-        self.painter_moved_partly = {white: None, black: None}
+        self.painter_moved_partly = {WHITE: None, BLACK: None}
         self.move_painter = False
-        self.painter_waiting = {white: None, black: None}
+        self.painter_waiting = {WHITE: None, BLACK: None}
 
         self.game_states = []
-        self.prev_state = {white: None, black: None}
+        self.prev_state = {WHITE: None, BLACK: None}
         self.current_state = \
-            {white: self.get_state_dict(), black: self.get_state_dict()}
+            {WHITE: self.get_state_dict(), BLACK: self.get_state_dict()}
         self.game_states.append(self.get_state_dict())
         self.game_states.append(self.get_state_dict())
-        self.next_state = {white: None, black: None}
-        self.next_step = {white: None, black: None}
+        self.next_state = {WHITE: None, BLACK: None}
+        self.next_step = {WHITE: None, BLACK: None}
         self.is_checking_mat = False
         self.load_log()
 
@@ -118,19 +116,19 @@ class Board:
             self.undo_impossible_move()
             self.impossible_check = False
             if not self.is_checking_mat:
-                print("King can't be left under check. "
-                      "Choose move to protect him")
-            return
+                # print("King can't be left under check. "
+                #       "Choose move to protect him")
+                return
 
         if self.is_checking_mat:
             self.is_checking_mat = False
             self.undo_impossible_move()
             return
 
-        if self.check[black]:
-            self.look_for_mat(black, piece_dict)
-        if self.check[white]:
-            self.look_for_mat(white, piece_dict)
+        if self.check[BLACK]:
+            self.look_for_mat(BLACK, piece_dict)
+        if self.check[WHITE]:
+            self.look_for_mat(WHITE, piece_dict)
 
         self.check_pat()
 
@@ -143,15 +141,15 @@ class Board:
             self.logger.write(start, end)
         self.save_step()
 
-        if (not self.mat[white]) and (not self.mat[black]) \
-                and (not self.pat[white]) and (not self.pat[black]):
+        if (not self.mat[WHITE]) and (not self.mat[BLACK]) \
+                and (not self.pat[WHITE]) and (not self.pat[BLACK]):
             self.check_board_state()
 
     def prepare_to_move_painter(self, moving_figure, start, end):
         if self.painter_moved_partly[self.player] is None:
             self.painter_moved_partly[self.player] = [start, end]
             moving_figure.done_steps = 1
-            print("done 1 step")
+            # print("done 1 step")
         else:
             self.move_painter = True
             moving_figure.done_steps = 2
@@ -166,7 +164,7 @@ class Board:
             middle_figure = self.figures.get(middle_field, None)
             if middle_figure is not None:
                 figure_type = type(middle_figure)
-                new_color = white if middle_figure.color == black else black
+                new_color = WHITE if middle_figure.color == BLACK else BLACK
                 self.figures[middle_field].name = chars[new_color][figure_type]
                 self.figures[middle_field].color = new_color
             # Перемещение со сменой цвета painter'a
@@ -200,18 +198,12 @@ class Board:
     def move_is_castling(self, f1, f2, start, end):
         if not f1.castling and not f2.catling:
             return False
-        if self.player == white:
-            if (start == (5, 1) and (end == (1, 1) or end == (8, 1))) or \
-                    (end == (5, 1) and (start == (1, 1) or start == (8, 1))):
-                return True
-            else:
-                return False
+        if self.player == WHITE:
+            return (start == (5, 1) and end in [(1, 1), (8, 1)]) or \
+                    (end == (5, 1) and start in [(1, 1), (8, 1)])
         else:
-            if (start == (5, 8) and (end == (1, 8) or end == (8, 8))) or \
-                    (end == (5, 8) and (start == (1, 8) or start == (8, 8))):
-                return True
-            else:
-                return False
+            return (start == (5, 8) and end in [(8, 8), (1, 8)]) or \
+                    (end == (5, 8) and start in [(8, 8), (1, 8)])
 
     def prepare_to_move_pawn(self, moving_figure, start, end):
         if self.have_once_moved_pawn:
@@ -245,8 +237,8 @@ class Board:
         self.game_states.append(self.get_state_dict())
 
         if self.was_undo:
-            self.next_state[white] = self.next_step[white] = None
-            self.next_state[black] = self.next_step[black] = None
+            self.next_state[WHITE] = self.next_step[WHITE] = None
+            self.next_state[BLACK] = self.next_step[BLACK] = None
             self.was_undo = False
 
     def undo_impossible_move(self):
@@ -279,7 +271,7 @@ class Board:
         self.current_state[another_player] = \
             deepcopy(self.prev_state[another_player])
 
-        self.prev_state[white] = self.prev_state[black] = None
+        self.prev_state[WHITE] = self.prev_state[BLACK] = None
         self.was_undo = True
         if not self.load_mode:
             self.logger.write("undo", None)
@@ -311,8 +303,8 @@ class Board:
         self.update_state(self.next_state[self.player])
         self.current_state[self.player] = self.get_state_dict()
 
-        self.next_step[white] = self.next_state[white] = None
-        self.next_step[black] = self.next_state[black] = None
+        self.next_step[WHITE] = self.next_state[WHITE] = None
+        self.next_step[BLACK] = self.next_state[BLACK] = None
         if not self.load_mode:
             self.logger.write("redo", None)
 
@@ -347,7 +339,7 @@ class Board:
 
     def look_for_check(self):
         self.is_checking_mode = True
-        piece_dict = {black: [], white: []}
+        piece_dict = {BLACK: [], WHITE: []}
         for position, piece in self.figures.items():
             if type(piece) == King:
                 self.kings[piece.color] = position
@@ -356,23 +348,23 @@ class Board:
             else:
                 piece_dict[piece.color].append((piece, position))
 
-        if self.can_see_king(self.kings[white], piece_dict[black]):
-            if self.player == black:
+        if self.can_see_king(self.kings[WHITE], piece_dict[BLACK]):
+            if self.player == BLACK:
                 self.impossible_check = True
-            self.check[white] = True
+            self.check[WHITE] = True
         else:
-            self.check[white] = False
+            self.check[WHITE] = False
 
-        if self.can_see_king(self.kings[black], piece_dict[white]):
-            if self.player == white:
+        if self.can_see_king(self.kings[BLACK], piece_dict[WHITE]):
+            if self.player == WHITE:
                 # """
-                # предотвращает шаг, после которого король останется под шахом и
+                # предотвращает шаг, после которого король останется под шахом,
                 # шаг, когда ты сам ставишь короля под удар
                 # """
                 self.impossible_check = True
-            self.check[black] = True
+            self.check[BLACK] = True
         else:
-            self.check[black] = False
+            self.check[BLACK] = False
 
         self.is_checking_mode = False
         return piece_dict
@@ -452,22 +444,22 @@ class Board:
             self.logger = GameLogWorker(None)
 
         mode = parser.mode.split('-')
-        self.game_mode = {white: mode[0], black: mode[1]}
+        self.game_mode = {WHITE: mode[0], BLACK: mode[1]}
         self.endless_game = parser.endless
         self.use_painter = parser.painter
 
     def finish_the_game(self):
-        if self.pat[white]:
+        if self.pat[WHITE]:
             self.game_state = GameState.DRAW_WHITE_PAT
-        elif self.pat[black]:
+        elif self.pat[BLACK]:
             self.game_state = GameState.DRAW_BLACK_PAT
         elif self.step == 85 and self.endless_game:
             self.game_state = GameState.DRAW_85_STEPS
         elif self.was_three_repeats:
             self.game_state = GameState.DRAW_REPEAT_STATE
-        elif self.mat[white]:
+        elif self.mat[WHITE]:
             self.game_state = GameState.BLACK_WIN
-        elif self.mat[black]:
+        elif self.mat[BLACK]:
             self.game_state = GameState.WHITE_WIN
 
         if self.game_state == GameState.NOT_FINISHED:
@@ -488,29 +480,29 @@ class Board:
         moves = []
         for pos, piece in self.figures.items():
             if piece.color == self.player:
-                moves = piece.possible_moves(pos[0], pos[1], self.figures, self)
+                moves = \
+                    piece.possible_moves(pos[0], pos[1], self.figures, self)
                 if len(moves) > 0:
                     state = pos
                     break
         if state == (-1, -1):
             return (-1, -1), (-1, -1)
-        n = random.randint(0, len(moves) - 1)
-        return state, moves[n]
+        return state, random.choice(moves)
 
     def full_board(self):
-        named_figures = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
+        classes = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
 
         for x in range(1, 9):
-            self.figures[(x, 2)] = Pawn(chars[white][Pawn], white, self)
-            self.figures[(x, 7)] = Pawn(chars[black][Pawn], black, self)
+            self.figures[(x, 2)] = Pawn(chars[WHITE][Pawn], WHITE, self)
+            self.figures[(x, 7)] = Pawn(chars[BLACK][Pawn], BLACK, self)
             self.figures[(x, 1)] = \
-                named_figures[x - 1](chars[white][named_figures[x - 1]], white, self)
+                classes[x - 1](chars[WHITE][classes[x - 1]], WHITE, self)
             self.figures[(x, 8)] = \
-                named_figures[x - 1](chars[black][named_figures[x - 1]], black, self)
+                classes[x - 1](chars[BLACK][classes[x - 1]], BLACK, self)
 
         if self.use_painter:
-            self.figures[(8, 3)] = Painter('w', white, self)
-            self.figures[(1, 6)] = Painter('b', black, self)
+            self.figures[(8, 3)] = Painter('w', WHITE, self)
+            self.figures[(1, 6)] = Painter('b', BLACK, self)
 
     def save_log(self):
         if self.delete_log or not self.save:
@@ -529,9 +521,9 @@ class Board:
         return figure
 
     def inform_check(self):
-        if self.check[white]:
+        if self.check[WHITE]:
             return "White king is in check"
-        elif self.check[black]:
+        elif self.check[BLACK]:
             return "Black king is in check"
         return ""
 
