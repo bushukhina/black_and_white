@@ -1,11 +1,14 @@
-from figures import Pawn, Queen, King, Knight, Rook, Bishop, Figure
-from game_board import Game
-
+from game_units.figures import Pawn, Queen, King, Knight, Rook, Bishop, Figure
+from game_units.game_board import Board
+from game_units.args_wrap import ArgsWrap
+import os
 import unittest
 
+catalog = os.path.dirname(os.getcwd())
+path = os.path.join(catalog, 'log', 'test.txt')
+game = Board(ArgsWrap(path, "H-H", False, False))
 white = "white"
 black = "black"
-game = Game(None)
 
 
 class TestFigure(unittest.TestCase):

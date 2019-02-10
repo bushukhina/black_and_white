@@ -1,7 +1,7 @@
 import unittest
-from test_game import TestGame
-from test_figures import TestFigure, TestFiguresClasses
-from test_bevaviour import TestBehaviour
+from tests.test_game import TestGame
+from tests.test_figures import TestFigure, TestFiguresClasses
+from tests.test_bevaviour import TestBehaviour
 
 
 def make_suite():
